@@ -35,10 +35,26 @@ def generateSensorData():
     
     return data
 
-#Inicializar el productor de Kafka
+# Función para codificar los datos en 3 bytes
+def encodeData(data):
+    # Codificar la temperatura en 14 bits (0 a 110 equivale a un rango de 0 a 16383)
+    temp_encoded = int((data['temperatura'] / 110) * 16383)
+    
+    # Codificar la humedad en 7 bits (0 a 100%)
+    hum_encoded = data['humedad']
+    
+    # Codificar la dirección del viento en 3 bits (8 direcciones)
+    wind_mapping = {'N': 0, 'NO': 1, 'O': 2, 'SO': 3, 'S': 4, 'SE': 5, 'E': 6, 'NE': 7}
+    wind_encoded = wind_mapping[data['direccionViento']]
+    
+    # Combinar todos los valores en 3 bytes
+    encoded_value = (temp_encoded << 9) | (hum_encoded << 3) | wind_encoded
+    return encoded_value.to_bytes(3, byteorder='big')
+
+# Inicializar el productor de Kafka
 producer = KafkaProducer(
     bootstrap_servers='lab9.alumchat.lol:9092',
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
+    value_serializer=lambda v: v # Enviar los datos como bytes
 )
 
 #Tópico al cual se enviarán los datos 
@@ -50,9 +66,12 @@ try:
         #Generar los datos de sensores
         sensorData = generateSensorData()
         
-        #Enviar datos al tópico
-        producer.send(topic, value=sensorData)
-        print(f"Datos enviados: {sensorData}")
+        # Codificar los datos antes de enviarlos
+        encoded_data = encodeData(sensorData)
+        
+        # Enviar datos codificados al tópico
+        producer.send(topic, value=encoded_data)
+        print(f"Datos enviados: {sensorData} como {encoded_data}")
         
         #Esperar entre 15 y 30 segundos antes de enviar el próximo mensaje
         time.sleep(random.uniform(15, 30))

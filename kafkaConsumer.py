@@ -15,12 +15,36 @@ import json
 import matplotlib.pyplot as plt
 from kafka import KafkaConsumer
 
-#Inicializar el consumidor de Kafka
+# Mapeo inverso para la dirección del viento
+wind_mapping_reverse = {0: 'N', 1: 'NO', 2: 'O', 3: 'SO', 4: 'S', 5: 'SE', 6: 'E', 7: 'NE'}
+
+# Función para decodificar los datos de 3 bytes
+def decodeData(encoded_data):
+    # Convertir de bytes a entero
+    encoded_value = int.from_bytes(encoded_data, byteorder='big')
+    
+    # Extraer cada componente
+    temp_encoded = (encoded_value >> 9) & 0x3FFF  # 14 bits para temperatura
+    hum_encoded = (encoded_value >> 3) & 0x7F     # 7 bits para humedad
+    wind_encoded = encoded_value & 0x07           # 3 bits para dirección del viento
+    
+    # Decodificar cada valor
+    temperature = (temp_encoded / 16383) * 110  # Convertir de vuelta a rango 0-110
+    humidity = hum_encoded
+    windDirection = wind_mapping_reverse[wind_encoded]
+    
+    return {
+        "temperatura": temperature,
+        "humedad": humidity,
+        "direccionViento": windDirection
+    }
+
+# Inicializar el consumidor de Kafka
 consumer = KafkaConsumer(
     '21542',
     group_id='foo2',
     bootstrap_servers=['lab9.alumchat.lol:9092'],
-    value_deserializer=lambda x: json.loads(x.decode('utf-8'))
+    value_deserializer=lambda x: x  # Recibir los datos como bytes
 )
 
 #Listas para almacenar los datos
@@ -62,11 +86,12 @@ def updateGraphs():
 #Consumo y graficación en tiempo real
 try:
     for message in consumer:
-        #Procesar el mensaje y extraer datos
-        payload = message.value
+        # Decodificar el mensaje
+        payload = decodeData(message.value)
+        
         allTemp.append(payload['temperatura'])
         allHumi.append(payload['humedad'])
-        
+
         #Imprimir mensaje recibido
         print(f"Mensaje recibido: {payload}")
         
