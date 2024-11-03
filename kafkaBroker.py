@@ -1,9 +1,9 @@
 """
- * Nombre: sensorSimulation.py
+ * Nombre: kafkaBroker.py
  * Autores:
     - Fernanda Esquivel, 21542
     - Melissa Pérez, 21385
- * Descripción: Simula la generación de datos de sensores de temperatura, humedad y dirección del viento.
+ * Descripción: Simula la generación de datos de sensores de temperatura, humedad y dirección del viento y los envía a un Topic de Kafka.
  * Lenguaje: Python
  * Recursos: VSCode, Kafka Apache
  * Historial: 
